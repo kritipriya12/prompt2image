@@ -4,7 +4,7 @@ export const HUGGINGFACE_CONFIG = {
   BASE_URL: 'https://api-inference.huggingface.co/models',
   
   // Default model to use for text-to-image generation
-  DEFAULT_MODEL: 'black-forest-labs/FLUX.1-schnell',
+  DEFAULT_MODEL: 'stabilityai/stable-diffusion-xl-base-1.0',
   
   // Get API key from environment variables
   get API_KEY() {
