@@ -12,9 +12,27 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 // Keep payloads reasonable
 app.use(express.json({ limit: '10mb' }));
 
-// Basic CORS + preflight handling. In production, set ALLOWED_ORIGIN to your frontend origin.
+// Support a comma-separated list of allowed origins. If ALLOWED_ORIGIN is a
+// single origin (or '*') the behavior is unchanged. For multiple origins we
+// echo back the request's Origin header when it's in the allow list.
+const _allowedOrigins = ALLOWED_ORIGIN.split(',').map(s => s.trim()).filter(Boolean);
+
 app.use((req, res, next) => {
-	res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+	const origin = req.get('Origin');
+
+	if (_allowedOrigins.length === 0 || _allowedOrigins.includes('*')) {
+		res.setHeader('Access-Control-Allow-Origin', '*');
+	} else if (origin && _allowedOrigins.includes(origin)) {
+		// Echo the allowed origin back for CORS and vary on Origin
+		res.setHeader('Access-Control-Allow-Origin', origin);
+		res.setHeader('Vary', 'Origin');
+	} else {
+		// Not an allowed origin — respond with null (no access) for browsers.
+		// We still allow the request to proceed server-side; you can change
+		// this to reject requests if you prefer.
+		res.setHeader('Access-Control-Allow-Origin', 'null');
+	}
+
 	res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
 	res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 	if (req.method === 'OPTIONS') return res.sendStatus(204);

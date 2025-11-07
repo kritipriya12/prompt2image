@@ -21,8 +21,11 @@ export function useHuggingFace() {
 
   // Check if API key is configured
   const checkApiKey = useCallback(() => {
-    // Note: API keys should live on the server/proxy. This helper simply
-    // returns whether a client-side env var exists (not recommended).
+    // If the client is configured to talk to a server proxy (BASE_URL starts
+    // with /api/hf) then the API key is expected to be provided server-side
+    // and we should not require a client-side VITE_ key.
+    if (HUGGINGFACE_CONFIG.BASE_URL.startsWith('/api/hf')) return true;
+    // Otherwise, check for a client-side VITE_ key (not recommended for prod).
     return !!HUGGINGFACE_CONFIG.API_KEY;
   }, []);
 

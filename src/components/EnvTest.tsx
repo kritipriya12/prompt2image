@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { HUGGINGFACE_CONFIG } from '@/config/huggingface';
 
 export function EnvTest() {
-  const [envVars, setEnvVars] = useState<Record<string, any>>({});
+  const [envVars, setEnvVars] = useState<Record<string, unknown>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,7 +19,13 @@ export function EnvTest() {
       });
       
       if (!apiKey) {
-        setError('VITE_HUGGINGFACE_API_KEY is not defined in the environment variables');
+        // If the client is configured to use a local/prod proxy (BASE_URL starts
+        // with /api/hf) then the API key is expected to be provided server-side
+        // and not present in the client env. In that case we don't treat this as
+        // an error; instead show a notice below.
+        if (!HUGGINGFACE_CONFIG.BASE_URL.startsWith('/api/hf')) {
+          setError('VITE_HUGGINGFACE_API_KEY is not defined in the environment variables');
+        }
       }
     } catch (err) {
       setError(`Error accessing environment variables: ${err instanceof Error ? err.message : String(err)}`);

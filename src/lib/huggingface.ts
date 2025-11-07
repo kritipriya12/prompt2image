@@ -6,14 +6,14 @@ const API_URL = "/api/hf/models";
 type ModelResponse = {
   generated_text?: string;
   error?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export async function queryHuggingFace(
   modelId: string,
-  inputs: any,
-  parameters = {}
-): Promise<ModelResponse> {
+  inputs: unknown,
+  parameters: Record<string, unknown> = {}
+): Promise<ModelResponse | unknown> {
   try {
     const response = await fetch(`${API_URL}/${modelId}`, {
       method: "POST",
@@ -31,7 +31,8 @@ export async function queryHuggingFace(
       throw new Error(error.error || "Failed to fetch from Hugging Face API");
     }
 
-    return await response.json();
+    const json = await response.json();
+    return json as unknown;
   } catch (error) {
     console.error("Error querying Hugging Face API:", error);
     throw error;
@@ -44,5 +45,20 @@ export async function generateText(
   modelId = "gpt2"
 ): Promise<string> {
   const response = await queryHuggingFace(modelId, prompt);
-  return response[0]?.generated_text || "No response generated";
+  // The response shape may vary between models. Check for an array
+  // with an object that contains `generated_text`.
+  if (Array.isArray(response) && response.length > 0) {
+    const first = response[0] as Record<string, unknown>;
+    const txt = first.generated_text;
+    if (typeof txt === 'string') return txt;
+  }
+
+  // If not an array, but an object with generated_text
+  if (response && typeof response === 'object') {
+    const obj = response as Record<string, unknown>;
+    const txt = obj.generated_text;
+    if (typeof txt === 'string') return txt;
+  }
+
+  return 'No response generated';
 }
