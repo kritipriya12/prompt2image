@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { HUGGINGFACE_CONFIG } from '@/config/huggingface';
 
-type ApiResponse<T = any> = {
+type ApiResponse<T = unknown> = {
   data: T | null;
   error: string | null;
   loading: boolean;
@@ -21,6 +21,8 @@ export function useHuggingFace() {
 
   // Check if API key is configured
   const checkApiKey = useCallback(() => {
+    // Note: API keys should live on the server/proxy. This helper simply
+    // returns whether a client-side env var exists (not recommended).
     return !!HUGGINGFACE_CONFIG.API_KEY;
   }, []);
 
@@ -34,25 +36,29 @@ export function useHuggingFace() {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
       try {
-        // First validate the API key
-        const { valid, error } = await HUGGINGFACE_CONFIG.validateApiKey();
-        if (!valid) {
-          throw new Error(error || 'Invalid API key');
-        }
-
-        const response = await fetch(
-          `${HUGGINGFACE_CONFIG.BASE_URL}/${modelId}`,
-          {
-            method: 'POST',
-            headers: HUGGINGFACE_CONFIG.getHeaders(),
-            body: JSON.stringify({
-              inputs: prompt,
-              options: HUGGINGFACE_CONFIG.DEFAULT_OPTIONS,
-            }),
-          }
-        );
+        // Send request to proxied path; the server proxy attaches the HF API key.
+        const response = await fetch(`${HUGGINGFACE_CONFIG.BASE_URL}/${modelId}`, {
+          method: 'POST',
+          headers: HUGGINGFACE_CONFIG.getHeaders(),
+          body: JSON.stringify({
+            inputs: prompt,
+            options: HUGGINGFACE_CONFIG.DEFAULT_OPTIONS,
+          }),
+        });
 
         if (!response.ok) {
+          // Provide a clearer message for 401 so developers know the proxy
+          // didn't attach a valid Authorization header (common in dev).
+          if (response.status === 401) {
+            const serverHint = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+              ? 'Make sure your dev proxy or server is running and HUGGINGFACE_API_KEY is set in the environment.'
+              : 'Ensure your production proxy is attaching a valid Hugging Face API key.';
+
+            throw new Error(
+              `API Error: 401 Unauthorized — upstream rejected the request. ${serverHint}`
+            );
+          }
+
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData.error || `API Error: ${response.status} ${response.statusText}`

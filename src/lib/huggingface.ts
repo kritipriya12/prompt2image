@@ -1,9 +1,7 @@
-const API_URL = "https://api-inference.huggingface.co/models";
-const API_KEY = import.meta.env.VITE_HUGGINGFACE_API_KEY;
-
-if (!API_KEY) {
-  console.warn("Hugging Face API key is not set. Please check your .env file.");
-}
+// Use the local proxy path so the browser talks to the same origin.
+// The dev server or the production server proxy should attach the
+// Authorization header. Never put the API key in client bundles.
+const API_URL = "/api/hf/models";
 
 type ModelResponse = {
   generated_text?: string;
@@ -21,7 +19,6 @@ export async function queryHuggingFace(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
         inputs,

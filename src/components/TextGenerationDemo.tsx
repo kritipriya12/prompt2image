@@ -6,13 +6,13 @@ import { useHuggingFace } from '@/hooks/useHuggingFace';
 export function TextGenerationDemo() {
   const [prompt, setPrompt] = useState('');
   const [generatedText, setGeneratedText] = useState('');
-  const { loading, error, generate } = useHuggingFace();
+  const { loading, error, generateText } = useHuggingFace();
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     
     try {
-      const result = await generate(prompt);
+      const result = await generateText(prompt);
       setGeneratedText(result);
     } catch (err) {
       console.error('Generation failed:', err);
